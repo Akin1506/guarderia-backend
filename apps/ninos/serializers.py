@@ -1,10 +1,12 @@
 import random
+from apps.salas.models import AsignacionNinoSala
 from rest_framework import serializers
 from .models import Nino, TutorNino, PersonaAutorizada, RetiroNino
 
 
 class NinoSerializer(serializers.ModelSerializer):
     tutores = serializers.SerializerMethodField()
+    sala_actual = serializers.SerializerMethodField()
 
     class Meta:
         model = Nino
@@ -20,6 +22,7 @@ class NinoSerializer(serializers.ModelSerializer):
                     'created_at',
                     'updated_at',
                     'tutores',
+                    'sala_actual',
 ]
         read_only_fields = ['id_nino', 'edad', 'created_at', 'updated_at']
 
@@ -36,6 +39,21 @@ class NinoSerializer(serializers.ModelSerializer):
             for v in vinculos
         ]
 
+    def get_sala_actual(self, obj):
+            asignacion = (
+                AsignacionNinoSala.objects
+                .filter(id_nino=obj, activo=True)
+                .select_related("id_sala")
+                .first()
+         )
+
+            if not asignacion:
+                return None
+
+            return {
+                "id_sala": asignacion.id_sala.id_sala,
+                "nombre": asignacion.id_sala.nombre,
+         }
 
 class NinoListSerializer(serializers.ModelSerializer):
     class Meta:
