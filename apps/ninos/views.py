@@ -192,6 +192,30 @@ class NinoViewSet(GuaderiaMixin, viewsets.ModelViewSet):
         q = request.query_params.get("q", "")
         ninos = self.get_queryset().filter(nombre__icontains=q)[:10]
         return Response(NinoListSerializer(ninos, many=True).data)
+    
+    @action(detail=False, methods=["get"], url_path="favoritos")
+    def favoritos(self, request):
+        favoritos = self.get_queryset().filter(favorito=True)
+        serializer = NinoListSerializer(favoritos, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=["patch"], url_path="favorito")
+    def cambiar_favorito(self, request, pk=None):
+        nino = self.get_object()
+
+        nino.favorito = not nino.favorito
+        nino.save()
+
+        return Response(
+            {
+                "id_nino": nino.id_nino,
+                "favorito": nino.favorito,
+                "mensaje": (
+                            "Niño agregado a favoritos."
+                            if nino.favorito
+                            else "Niño eliminado de favoritos."
+                            )
+    })
 
     @action(detail=True, methods=["post"], url_path="registrar-retiro")
     def registrar_retiro(self, request, pk=None):
@@ -293,11 +317,19 @@ def dashboard_resumen(request):
         pagos_qs = pagos_qs.filter(id_guarderia=guarderia)
 
     total_ninos = ninos_qs.count()
-    asistencia_hoy = asistencia_qs.filter(fecha=hoy, estado="presente").count()
-    pagos_mes = pagos_qs.filter(
-        fecha__month=mes_actual, fecha__year=anio_actual
+    asistencia_hoy = asistencia_qs.filter(
+        fecha=hoy,
+        estado="presente"
     ).count()
-    alertas_salud = salud_qs.filter(fecha=hoy).values("id_nino").distinct().count()
+
+    pagos_mes = pagos_qs.filter(
+        fecha__month=mes_actual,
+        fecha__year=anio_actual
+    ).count()
+
+    alertas_salud = salud_qs.filter(
+        fecha=hoy
+    ).values("id_nino").distinct().count()
 
     pagos_grafico = [
         {
@@ -305,12 +337,57 @@ def dashboard_resumen(request):
             "total": float(p["total"] or 0),
             "cantidad": p["cantidad"],
         }
-        for p in pagos_qs.filter(fecha__month=mes_actual, fecha__year=anio_actual)
+        for p in pagos_qs.filter(
+            fecha__month=mes_actual,
+            fecha__year=anio_actual,
+        )
         .annotate(dia=TruncDay("fecha"))
         .values("dia")
-        .annotate(total=Sum("total"), cantidad=Count("id_pago"))
+        .annotate(
+            total=Sum("total"),
+            cantidad=Count("id_pago"),
+        )
         .order_by("dia")
     ]
+
+    # Próximos cumpleaños
+    proximos_cumpleanios = []
+
+    for nino in ninos_qs:
+        if not nino.fecha_nacimiento:
+            continue
+
+        try:
+            cumple = nino.fecha_nacimiento.replace(year=hoy.year)
+        except ValueError:
+            # 29 de febrero
+            cumple = nino.fecha_nacimiento.replace(
+                year=hoy.year,
+                day=28,
+            )
+
+        if cumple < hoy:
+            try:
+                cumple = cumple.replace(year=hoy.year + 1)
+            except ValueError:
+                cumple = cumple.replace(
+                    year=hoy.year + 1,
+                    day=28,
+                )
+
+        dias = (cumple - hoy).days
+
+        if 0 <= dias <= 7:
+            proximos_cumpleanios.append(
+                {
+                    "id_nino": nino.id_nino,
+                    "nombre": nino.nombre,
+                    "fecha": cumple.strftime("%d/%m"),
+                    "dias": dias,
+                }
+            )
+
+    proximos_cumpleanios.sort(key=lambda x: x["dias"])
 
     return Response(
         {
@@ -319,9 +396,22 @@ def dashboard_resumen(request):
             "pagos_mes": pagos_mes,
             "alertas_salud": alertas_salud,
             "pagos_grafico": pagos_grafico,
+            "proximos_cumpleanios": proximos_cumpleanios,
+        }
+    )    
+    print("===== PRÓXIMOS CUMPLEAÑOS =====")
+    print(proximos_cumpleanios)
+
+    return Response(
+        {
+            "total_ninos": total_ninos,
+            "asistencia_hoy": asistencia_hoy,
+            "pagos_mes": pagos_mes,
+            "alertas_salud": alertas_salud,
+            "pagos_grafico": pagos_grafico,
+            "proximos_cumpleanios": proximos_cumpleanios,
         }
     )
-
 
 # ── Personas Autorizadas ──────────────────────────────────────────────────────
 

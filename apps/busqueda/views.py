@@ -28,6 +28,7 @@ class BusquedaGlobalView(APIView):
         modulos = [
             {"nombre": "Dashboard", "ruta": "/dashboard", "icono": "🏠"},
             {"nombre": "Niños", "ruta": "/ninos", "icono": "👶"},
+            {"nombre": "Favoritos", "ruta": "/favoritos", "icono": "❤️"},
             {"nombre": "Tutores", "ruta": "/tutores", "icono": "👨‍👩‍👧"},
             {"nombre": "Salas", "ruta": "/salas", "icono": "🏫"},
             {"nombre": "Servicios", "ruta": "/servicios", "icono": "🛎️"},

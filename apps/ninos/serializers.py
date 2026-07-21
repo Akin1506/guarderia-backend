@@ -9,10 +9,18 @@ class NinoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Nino
         fields = [
-            'id_nino', 'nombre', 'fecha_nacimiento', 'edad',
-            'foto', 'info_medica', 'activo',
-            'created_at', 'updated_at', 'tutores'
-        ]
+                    'id_nino',
+                    'nombre',
+                    'fecha_nacimiento',
+                    'edad',
+                    'foto',
+                    'info_medica',
+                    'activo',
+                    'favorito',
+                    'created_at',
+                    'updated_at',
+                    'tutores',
+]
         read_only_fields = ['id_nino', 'edad', 'created_at', 'updated_at']
 
     def get_tutores(self, obj):
@@ -32,7 +40,15 @@ class NinoSerializer(serializers.ModelSerializer):
 class NinoListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Nino
-        fields = ['id_nino', 'nombre', 'fecha_nacimiento', 'edad', 'foto', 'activo']
+        fields = [
+                    'id_nino',
+                    'nombre',
+                    'fecha_nacimiento',
+                    'edad',
+                    'foto',
+                    'activo',
+                    'favorito',
+]
 
 
 class TutorNinoSerializer(serializers.ModelSerializer):
