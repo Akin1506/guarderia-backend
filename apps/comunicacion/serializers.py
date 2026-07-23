@@ -14,8 +14,13 @@ class MensajeSerializer(serializers.ModelSerializer):
             'id_receptor', 'receptor_nombre',
             'mensaje', 'fecha', 'activo'
         ]
-        read_only_fields = ['id_mensaje', 'fecha']
-
+        read_only_fields = [
+            'id_mensaje',
+            'id_emisor',
+            'emisor_nombre',
+            'receptor_nombre',
+            'fecha',
+        ]
 
 class MensajeListSerializer(serializers.ModelSerializer):
     emisor_nombre   = serializers.CharField(source='id_emisor.nombre',   read_only=True)

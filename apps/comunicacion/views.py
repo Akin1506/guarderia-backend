@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import Q
+from .firebase_service import enviar_notificacion_usuario
 
 from apps.usuarios.models import Usuario
 from apps.usuarios.permissions import IsAdmin
@@ -37,7 +38,36 @@ class MensajeViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user_id = get_usuario_id(self.request)
-        serializer.save(id_emisor_id=user_id)
+
+        mensaje = serializer.save(
+            id_emisor_id=user_id
+        )
+
+        # Crear notificación interna
+        Notificacion.objects.create(
+            id_usuario=mensaje.id_receptor,
+            id_guarderia=mensaje.id_guarderia,
+            mensaje=f"Nuevo mensaje de {mensaje.id_emisor.nombre}",
+        )
+
+        # Enviar notificación push
+        try:
+            resultado = enviar_notificacion_usuario(
+                usuario=mensaje.id_receptor,
+                titulo="Nuevo mensaje de la guardería",
+                cuerpo=mensaje.mensaje,
+                data={
+                    "tipo": "mensaje",
+                    "id_mensaje": mensaje.id_mensaje,
+                    "id_emisor": mensaje.id_emisor_id,
+                },
+            )
+
+            print("RESULTADO FCM:", resultado)
+
+        except Exception as error:
+            # El mensaje se guarda aunque Firebase falle
+            print("ERROR AL ENVIAR NOTIFICACIÓN FCM:", error)
 
     def destroy(self, request, *args, **kwargs):
         mensaje        = self.get_object()
