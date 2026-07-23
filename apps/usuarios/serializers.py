@@ -1,7 +1,7 @@
 # apps/usuarios/serializers.py
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password, check_password
-from .models import Rol, Usuario
+from .models import Rol, Usuario, DispositivoFCM
 
 
 class RolSerializer(serializers.ModelSerializer):
@@ -97,3 +97,21 @@ class CambiarPasswordSerializer(serializers.Serializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
+
+class RegistrarTokenFCMSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    plataforma = serializers.CharField(
+        required=False,
+        default="android",
+        max_length=20,
+    )
+
+    def validate_token(self, value):
+        token = value.strip()
+
+        if not token:
+            raise serializers.ValidationError(
+                "El token FCM es obligatorio."
+            )
+
+        return token

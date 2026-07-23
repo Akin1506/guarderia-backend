@@ -7,3 +7,6 @@ __pycache__/
 staticfiles/
 
 .idea/
+# Credenciales privadas de Firebase
+secrets/
+firebase-service-account.json

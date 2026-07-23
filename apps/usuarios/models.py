@@ -111,3 +111,26 @@ class Usuario(models.Model):
 
         # eliminar usuario
         super().delete(*args, **kwargs)
+class DispositivoFCM(models.Model):
+    id_dispositivo = models.AutoField(primary_key=True)
+
+    id_usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        db_column="id_usuario",
+        related_name="dispositivos_fcm",
+    )
+
+    token = models.TextField(unique=True)
+    plataforma = models.CharField(max_length=20, default="android")
+    activo = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "dispositivo_fcm"
+        verbose_name = "Dispositivo FCM"
+        verbose_name_plural = "Dispositivos FCM"
+
+    def __str__(self):
+        return f"{self.id_usuario.email} - {self.plataforma}"

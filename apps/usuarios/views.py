@@ -8,13 +8,14 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.cache import cache
 from django.utils import timezone
 
-from .models import Rol, Usuario
+from .models import Rol, Usuario, DispositivoFCM
 from .serializers import (
     RolSerializer,
     UsuarioSerializer,
     UsuarioListSerializer,
     CambiarPasswordSerializer,
     LoginSerializer,
+    RegistrarTokenFCMSerializer,
 )
 from .permissions import IsAdmin, IsAdminOrSelf
 
@@ -203,7 +204,56 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
     def me(self, request):
         """GET /api/v1/usuarios/me/"""
-        return Response(UsuarioListSerializer(request.user).data)
+        usuario = getattr(request, "user_obj", request.user)
+        return Response(UsuarioListSerializer(usuario).data)
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="registrar-token-fcm",
+        permission_classes=[IsAuthenticated],
+    )
+    def registrar_token_fcm(self, request):
+        serializer = RegistrarTokenFCMSerializer(
+            data=request.data
+        )
+        serializer.is_valid(raise_exception=True)
+
+        token = serializer.validated_data["token"]
+        plataforma = serializer.validated_data["plataforma"]
+
+        usuario = getattr(request, "user_obj", None)
+
+        if usuario is None:
+            usuario = request.user
+
+        dispositivo, creado = DispositivoFCM.objects.update_or_create(
+            token=token,
+            defaults={
+                "id_usuario": usuario,
+                "plataforma": plataforma,
+                "activo": True,
+            },
+        )
+
+        return Response(
+            {
+                "detail": (
+                    "Token FCM registrado correctamente."
+                    if creado
+                    else "Token FCM actualizado correctamente."
+                ),
+                "id_dispositivo": dispositivo.id_dispositivo,
+                "plataforma": dispositivo.plataforma,
+            },
+            status=(
+                status.HTTP_201_CREATED
+                if creado
+                else status.HTTP_200_OK
+            ),
+        )
+
+
 
     @action(detail=True, methods=["post"], url_path="cambiar-password")
     def cambiar_password(self, request, pk=None):
